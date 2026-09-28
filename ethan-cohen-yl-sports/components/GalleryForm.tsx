@@ -6,13 +6,113 @@ type GalleryFormProps = {
   existing?: any;
 };
 
+type UploadState = {
+  name: string;
+  status: "waiting" | "uploading" | "done" | "error";
+  error?: string;
+};
+
+const CONCURRENT_UPLOADS = 4;
+
 export default function GalleryForm({ existing }: GalleryFormProps) {
   const [status, setStatus] = useState("");
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploads, setUploads] = useState<UploadState[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  function updateUpload(index: number, update: Partial<UploadState>) {
+    setUploads((current) =>
+      current.map((upload, uploadIndex) =>
+        uploadIndex === index ? { ...upload, ...update } : upload
+      )
+    );
+  }
+
+  async function uploadOne(file: File, index: number, galleryId: string) {
+    updateUpload(index, { status: "uploading" });
+
+    try {
+      const signingResponse = await fetch("/api/admin/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: file.name,
+          type: file.type,
+          galleryId,
+        }),
+      });
+
+      const signedUpload = await signingResponse.json();
+
+      if (!signingResponse.ok) {
+        throw new Error(signedUpload.error || "Could not prepare upload.");
+      }
+
+      const uploadResponse = await fetch(signedUpload.url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Storage upload failed (${uploadResponse.status}).`);
+      }
+
+      const photoResponse = await fetch(`/api/admin/gallery/${galleryId}/photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_url: signedUpload.publicUrl,
+          storage_key: signedUpload.key,
+          caption: "",
+          tags: [],
+        }),
+      });
+
+      const photoResult = await photoResponse.json();
+
+      if (!photoResponse.ok) {
+        throw new Error(photoResult.error || "Photo record could not be saved.");
+      }
+
+      updateUpload(index, { status: "done" });
+    } catch (error) {
+      updateUpload(index, {
+        status: "error",
+        error: error instanceof Error ? error.message : "Upload failed.",
+      });
+    }
+  }
+
+  async function uploadInBatches(photoFiles: File[], galleryId: string) {
+    let nextIndex = 0;
+
+    async function worker() {
+      while (nextIndex < photoFiles.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+
+        await uploadOne(photoFiles[currentIndex], currentIndex, galleryId);
+      }
+    }
+
+    const workers = Array.from(
+      { length: Math.min(CONCURRENT_UPLOADS, photoFiles.length) },
+      () => worker()
+    );
+
+    await Promise.all(workers);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus("Saving gallery...");
+
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setStatus("Saving gallery details...");
 
     const form = new FormData(event.currentTarget);
     const payload = Object.fromEntries(form.entries());
@@ -26,85 +126,71 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
 
     let gallery = existing;
 
-    if (existing) {
-      const response = await fetch(`/api/admin/gallery/${existing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    try {
+      if (existing) {
+        const response = await fetch(`/api/admin/gallery/${existing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-      if (!response.ok) {
         const result = await response.json();
-        setStatus(result.error || "Could not update this gallery.");
-        return;
-      }
-    } else {
-      const response = await fetch("/api/admin/gallery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
 
-      gallery = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Could not update this gallery.");
+        }
 
-      if (!response.ok) {
-        setStatus(gallery.error || "Could not create this gallery.");
-        return;
-      }
-    }
-
-    if (files?.length) {
-      for (const file of Array.from(files)) {
-        setStatus(`Uploading ${file.name}...`);
-
-        const signingResponse = await fetch("/api/admin/presign", {
+        gallery = result;
+      } else {
+        const response = await fetch("/api/admin/gallery", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            filename: file.name,
-            type: file.type,
-            galleryId: gallery.id,
-          }),
+          body: JSON.stringify(body),
         });
 
-        const signedUpload = await signingResponse.json();
+        const result = await response.json();
 
-        if (!signingResponse.ok) {
-          setStatus(signedUpload.error || `Could not prepare ${file.name}.`);
-          return;
+        if (!response.ok) {
+          throw new Error(result.error || "Could not create this gallery.");
         }
 
-        const uploadResponse = await fetch(signedUpload.url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-
-        if (!uploadResponse.ok) {
-          setStatus(`Could not upload ${file.name}.`);
-          return;
-        }
-
-        const photoResponse = await fetch(`/api/admin/gallery/${gallery.id}/photo`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            display_url: signedUpload.publicUrl,
-            storage_key: signedUpload.key,
-            caption: "",
-            tags: [],
-          }),
-        });
-
-        if (!photoResponse.ok) {
-          setStatus(`${file.name} uploaded, but could not be saved to the gallery.`);
-          return;
-        }
+        gallery = result;
       }
-    }
 
-    setStatus("Saved successfully. Refresh the admin page to see your gallery.");
+      if (files.length > 0) {
+        setUploads(
+          files.map((file) => ({
+            name: file.name,
+            status: "waiting",
+          }))
+        );
+
+        setStatus(`Uploading ${files.length} photo${files.length === 1 ? "" : "s"}...`);
+
+        await uploadInBatches(files, gallery.id);
+
+        setStatus("Uploads finished. Review any files marked as failed below.");
+      } else {
+        setStatus("Gallery saved successfully.");
+      }
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : "Could not save this gallery."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
+
+  const completeUploads = uploads.filter(
+    (upload) => upload.status === "done"
+  ).length;
+
+  const failedUploads = uploads.filter(
+    (upload) => upload.status === "error"
+  ).length;
 
   return (
     <form className="form" onSubmit={submit}>
@@ -125,17 +211,28 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
 
       <label>
         DATE
-        <input name="game_date" type="date" defaultValue={existing?.game_date || ""} />
+        <input
+          name="game_date"
+          type="date"
+          defaultValue={existing?.game_date || ""}
+        />
       </label>
 
       <label>
         HOME TEAM
-        <input name="team_home" defaultValue={existing?.team_home || "Yeshiva League"} />
+        <input
+          name="team_home"
+          defaultValue={existing?.team_home || "Yeshiva League"}
+        />
       </label>
 
       <label>
         HOME SCORE
-        <input name="home_score" type="number" defaultValue={existing?.home_score ?? ""} />
+        <input
+          name="home_score"
+          type="number"
+          defaultValue={existing?.home_score ?? ""}
+        />
       </label>
 
       <label>
@@ -145,12 +242,20 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
 
       <label>
         AWAY SCORE
-        <input name="away_score" type="number" defaultValue={existing?.away_score ?? ""} />
+        <input
+          name="away_score"
+          type="number"
+          defaultValue={existing?.away_score ?? ""}
+        />
       </label>
 
       <label>
-        <input name="is_public" type="checkbox" defaultChecked={existing?.is_public ?? true} />
-        {" "}PUBLIC GALLERY (uncheck for private client proofing)
+        <input
+          name="is_public"
+          type="checkbox"
+          defaultChecked={existing?.is_public ?? true}
+        />{" "}
+        PUBLIC GALLERY (uncheck for private client proofing)
       </label>
 
       <label>
@@ -159,12 +264,42 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
           type="file"
           accept="image/jpeg,image/png,image/webp"
           multiple
-          onChange={(event) => setFiles(event.target.files)}
+          disabled={isSaving}
+          onChange={(event) => {
+            setFiles(Array.from(event.target.files ?? []));
+            setUploads([]);
+          }}
         />
       </label>
 
-      <button type="submit">SAVE GALLERY →</button>
+      <button type="submit" disabled={isSaving}>
+        {isSaving ? "SAVING…" : "SAVE GALLERY →"}
+      </button>
+
       {status && <p className="notice">{status}</p>}
+
+      {uploads.length > 0 && (
+        <div className="upload-status" aria-live="polite">
+          <p>
+            {completeUploads} of {uploads.length} uploaded
+            {failedUploads ? ` · ${failedUploads} failed` : ""}
+          </p>
+
+          {uploads.map((upload, index) => (
+            <p key={`${upload.name}-${index}`}>
+              {upload.status === "done"
+                ? "✓"
+                : upload.status === "error"
+                  ? "✕"
+                  : upload.status === "uploading"
+                    ? "↑"
+                    : "○"}{" "}
+              {upload.name}
+              {upload.error ? ` — ${upload.error}` : ""}
+            </p>
+          ))}
+        </div>
+      )}
     </form>
   );
 }
