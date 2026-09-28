@@ -1,0 +1,2 @@
+import {NextResponse} from "next/server";import bcrypt from "bcryptjs";import {makeAdminToken} from "@/lib/auth";
+export async function POST(req:Request){const {password}=await req.json();const valid=await bcrypt.compare(password,process.env.ADMIN_PASSWORD_HASH!);if(!valid)return NextResponse.json({error:"Unauthorized"},{status:401});const res=NextResponse.json({ok:true});res.cookies.set("ec_admin",await makeAdminToken(),{httpOnly:true,secure:true,sameSite:"strict",path:"/",maxAge:604800});return res;}

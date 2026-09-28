@@ -1,0 +1,2 @@
+import Link from "next/link";
+type Props={gallery:any}; export default function GalleryCard({gallery}:Props){return <Link className="card" href={`/gallery/${gallery.slug}`}><img src={gallery.cover_url||"/placeholder.svg"} alt={gallery.title}/><div className="overlay"><p>{gallery.sport?.toUpperCase()}</p><h2>{gallery.title}</h2><span>{gallery.photo_count||0} PHOTOS ↗</span></div></Link>}

@@ -1,0 +1,3 @@
+import {NextRequest,NextResponse} from "next/server";import {cookies} from "next/headers";import {verifyAdminToken} from "@/lib/auth";import {adminSupabase} from "@/lib/supabase";
+function slugify(s:string){return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")}
+export async function POST(req:NextRequest){if(!await verifyAdminToken((await cookies()).get("ec_admin")?.value))return NextResponse.json({error:"Unauthorized"},{status:401});const body=await req.json();const row={...body,slug:slugify(body.title),proof_token:body.is_public?null:crypto.randomUUID()};const {data,error}=await adminSupabase().from("galleries").insert(row).select().single();if(error)return NextResponse.json({error:error.message},{status:400});return NextResponse.json(data)}

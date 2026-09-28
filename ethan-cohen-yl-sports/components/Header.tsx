@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function Header(){return <header className="header"><Link href="/" className="brand"><span>ETHAN</span> COHEN<small>SPORTS PHOTOGRAPHY</small></Link><nav className="nav"><Link href="/">Work</Link><Link href="/scores">Scores</Link><Link href="/search">Search</Link><a href="/#about">About</a></nav></header>}

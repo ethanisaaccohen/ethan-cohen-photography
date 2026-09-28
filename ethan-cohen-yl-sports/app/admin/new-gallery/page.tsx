@@ -1,0 +1,1 @@
+import GalleryForm from "@/components/GalleryForm";export default function New(){return <main className="page"><p className="eyebrow">PRIVATE ADMIN</p><h1 className="title">NEW<br/><em>GALLERY.</em></h1><GalleryForm/></main>}
