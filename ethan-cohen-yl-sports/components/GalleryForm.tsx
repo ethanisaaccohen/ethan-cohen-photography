@@ -69,12 +69,23 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
         }),
       });
 
-      const photoResult = await photoResponse.json();
+let photoResult: { error?: string } = {};
 
-      if (!photoResponse.ok) {
-        throw new Error(photoResult.error || "Photo record could not be saved.");
-      }
+const responseText = await photoResponse.text();
 
+if (responseText) {
+  try {
+    photoResult = JSON.parse(responseText);
+  } catch {
+    photoResult = {};
+  }
+}
+
+if (!photoResponse.ok) {
+  throw new Error(
+    photoResult.error || "Photo record could not be saved."
+  );
+}
       updateUpload(index, { status: "done" });
     } catch (error) {
       updateUpload(index, {
