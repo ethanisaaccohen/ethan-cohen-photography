@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 
+type Photo = {
+  id: string;
+  display_url: string;
+  caption?: string | null;
+};
+
 type GalleryFormProps = {
   existing?: any;
+  photos?: Photo[];
 };
 
 type UploadState = {
@@ -28,11 +35,16 @@ async function readJson(response: Response) {
   }
 }
 
-export default function GalleryForm({ existing }: GalleryFormProps) {
+export default function GalleryForm({
+  existing,
+  photos = [],
+}: GalleryFormProps) {
   const [status, setStatus] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [galleryPhotos, setGalleryPhotos] = useState<Photo[]>(photos);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   function updateUpload(index: number, update: Partial<UploadState>) {
     setUploads((current) =>
@@ -102,6 +114,7 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
         );
       }
 
+      setGalleryPhotos((current) => [photoResult, ...current]);
       updateUpload(index, { status: "done" });
     } catch (error) {
       updateUpload(index, {
@@ -128,6 +141,43 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
     await Promise.all(
       Array.from({ length: workerCount }, () => worker())
     );
+  }
+
+  async function deletePhoto(photo: Photo) {
+    const confirmed = window.confirm(
+      "Delete this photo from the gallery? This cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingPhotoId(photo.id);
+    setStatus("");
+
+    try {
+      const response = await fetch(`/api/admin/photos/${photo.id}`, {
+        method: "DELETE",
+      });
+
+      const result = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not delete this photo.");
+      }
+
+      setGalleryPhotos((current) =>
+        current.filter((currentPhoto) => currentPhoto.id !== photo.id)
+      );
+
+      setStatus("Photo removed from this gallery.");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not delete this photo."
+      );
+    } finally {
+      setDeletingPhotoId(null);
+    }
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -206,6 +256,7 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
       await uploadInBatches(files, gallery.id);
 
       setStatus("Uploads finished. Review any files marked as failed below.");
+      setFiles([]);
     } catch (error) {
       setStatus(
         error instanceof Error
@@ -332,6 +383,44 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
             </p>
           ))}
         </div>
+      )}
+
+      {existing && (
+        <section className="admin-photo-manager">
+          <div className="sectionhead">
+            <span>GALLERY PHOTOS</span>
+            <span>
+              {galleryPhotos.length} PHOTO
+              {galleryPhotos.length === 1 ? "" : "S"}
+            </span>
+          </div>
+
+          {galleryPhotos.length ? (
+            <div className="admin-photo-grid">
+              {galleryPhotos.map((photo) => (
+                <article className="admin-photo-card" key={photo.id}>
+                  <img
+                    src={photo.display_url}
+                    alt={photo.caption || "Gallery photo"}
+                  />
+
+                  <button
+                    className="delete-photo"
+                    type="button"
+                    disabled={deletingPhotoId === photo.id}
+                    onClick={() => deletePhoto(photo)}
+                  >
+                    {deletingPhotoId === photo.id
+                      ? "DELETING…"
+                      : "DELETE PHOTO"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="empty">NO PHOTOS IN THIS GALLERY YET.</p>
+          )}
+        </section>
       )}
     </form>
   );
