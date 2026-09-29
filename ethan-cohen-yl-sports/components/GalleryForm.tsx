@@ -60,7 +60,9 @@ export default function GalleryForm({
     try {
       const signingResponse = await fetch("/api/admin/presign", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           filename: file.name,
           type: file.type,
@@ -96,7 +98,9 @@ export default function GalleryForm({
         `/api/admin/gallery/${galleryId}/photo`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             display_url: signedUpload.publicUrl,
             storage_key: signedUpload.key,
@@ -115,7 +119,10 @@ export default function GalleryForm({
       }
 
       setGalleryPhotos((current) => [photoResult, ...current]);
-      updateUpload(index, { status: "done" });
+
+      updateUpload(index, {
+        status: "done",
+      });
     } catch (error) {
       updateUpload(index, {
         status: "error",
@@ -206,7 +213,9 @@ export default function GalleryForm({
       if (existing) {
         const response = await fetch(`/api/admin/gallery/${existing.id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(body),
         });
 
@@ -220,7 +229,9 @@ export default function GalleryForm({
       } else {
         const response = await fetch("/api/admin/gallery", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(body),
         });
 
