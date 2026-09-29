@@ -114,3 +114,69 @@
     top: 12px;
   }
 }
+/* Admin gallery photo manager */
+
+.admin-photo-manager {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 48px;
+  padding-top: 32px;
+}
+
+.admin-photo-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  margin-top: 20px;
+}
+
+.admin-photo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-photo-card img {
+  aspect-ratio: 1 / 1;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.delete-photo {
+  appearance: none;
+  background: transparent;
+  border: 1px solid #ff5f5f;
+  color: #ff8585;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 10px 12px;
+}
+
+.delete-photo:hover:not(:disabled) {
+  background: #ff5f5f;
+  color: #111111;
+}
+
+.delete-photo:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.delete-photo:focus-visible {
+  outline: 2px solid #d7ff21;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .admin-photo-grid {
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .delete-photo {
+    font-size: 11px;
+    padding: 9px 8px;
+  }
+}
