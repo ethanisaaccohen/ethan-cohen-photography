@@ -54,4 +54,58 @@ export async function POST(
 
     if (!displayUrl || !storageKey) {
       return NextResponse.json(
-        { error: "display_url and storage_key
+        {
+          error: "display_url and storage_key are required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const database = adminSupabase();
+
+    const { data: photo, error: photoError } = await database
+      .from("photos")
+      .insert({
+        gallery_id: galleryId,
+        display_url: displayUrl,
+        storage_key: storageKey,
+        caption,
+      })
+      .select()
+      .single();
+
+    if (photoError || !photo) {
+      return NextResponse.json(
+        {
+          error: photoError?.message || "Could not save photo.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (tags.length > 0) {
+      const { error: tagError } = await database.from("photo_tags").insert(
+        tags.map((tag) => ({
+          photo_id: photo.id,
+          tag,
+        }))
+      );
+
+      if (tagError) {
+        return NextResponse.json(
+          {
+            error: `Photo uploaded, but tags could not be saved: ${tagError.message}`,
+            photo,
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+    }
+
+    return NextResponse.json(photo, { status:
