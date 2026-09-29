@@ -1,7 +1,7 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const region = process.env.B2_REGION || "us-west-004";
+const region = process.env.B2_REGION || "us-east-005";
 const endpoint = process.env.B2_ENDPOINT?.trim();
 const bucket = process.env.B2_BUCKET?.trim();
 const accessKeyId = process.env.B2_KEY_ID?.trim();
