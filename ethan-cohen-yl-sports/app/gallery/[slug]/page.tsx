@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
+import PhotoGrid from "@/components/PhotoGrid";
 
 export const dynamic = "force-dynamic";
 
