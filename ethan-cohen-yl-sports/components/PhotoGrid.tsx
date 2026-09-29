@@ -60,18 +60,21 @@ export default function PhotoGrid({
     <>
       <div className="photos">
         {photos.map((photo, index) => (
-          <button
-            key={photo.id}
-            className="photoButton"
-            type="button"
-            onClick={() => setSelectedIndex(index)}
-            aria-label={`Open photo ${index + 1} of ${photos.length}`}
-          >
-            <img
-              src={photo.display_url}
-              alt={photo.caption || `${galleryTitle} photo ${index + 1}`}
-            />
-          </button>
+<figure key={photo.id}>
+  <button
+    className="photoButton"
+    type="button"
+    onClick={() => setSelectedIndex(index)}
+    aria-label={`Open photo ${index + 1} of ${photos.length}`}
+  >
+    <img
+      src={photo.display_url}
+      alt={photo.caption || `${galleryTitle} photo ${index + 1}`}
+    />
+  </button>
+
+  {photo.caption && <figcaption>{photo.caption}</figcaption>}
+</figure>
         ))}
       </div>
 
