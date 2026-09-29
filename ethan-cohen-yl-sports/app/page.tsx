@@ -9,11 +9,31 @@ export default async function Home() {
 
   const { data: galleryRows } = await db
     .from("galleries")
-    .select("*")
+    .select(`
+      *,
+      photos (
+        id,
+        display_url,
+        created_at
+      )
+    `)
     .eq("is_public", true)
     .order("game_date", { ascending: false });
 
-  const galleries = galleryRows ?? [];
+  const galleries = (galleryRows ?? []).map((gallery: any) => {
+    const photos = [...(gallery.photos ?? [])].sort((a, b) => {
+      const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+
+      return bDate - aDate;
+    });
+
+    return {
+      ...gallery,
+      cover_url: photos[0]?.display_url ?? null,
+      photo_count: photos.length,
+    };
+  });
 
   return (
     <>
