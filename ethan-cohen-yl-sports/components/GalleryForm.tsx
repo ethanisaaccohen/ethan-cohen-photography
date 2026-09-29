@@ -14,6 +14,20 @@ type UploadState = {
 
 const CONCURRENT_UPLOADS = 4;
 
+async function readJson(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
 export default function GalleryForm({ existing }: GalleryFormProps) {
   const [status, setStatus] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -29,7 +43,7 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
   }
 
   async function uploadOne(file: File, index: number, galleryId: string) {
-    updateUpload(index, { status: "uploading" });
+    updateUpload(index, { status: "uploading", error: undefined });
 
     try {
       const signingResponse = await fetch("/api/admin/presign", {
@@ -42,50 +56,52 @@ export default function GalleryForm({ existing }: GalleryFormProps) {
         }),
       });
 
-      const signedUpload = await signingResponse.json();
+      const signedUpload = await readJson(signingResponse);
 
       if (!signingResponse.ok) {
         throw new Error(signedUpload.error || "Could not prepare upload.");
       }
 
+      if (!signedUpload.url || !signedUpload.publicUrl || !signedUpload.key) {
+        throw new Error("Upload authorization returned incomplete data.");
+      }
+
       const uploadResponse = await fetch(signedUpload.url, {
         method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
         body: file,
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Storage upload failed (${uploadResponse.status}).`);
+        throw new Error(
+          `Storage upload failed (${uploadResponse.status}).`
+        );
       }
 
-      const photoResponse = await fetch(`/api/admin/gallery/${galleryId}/photo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_url: signedUpload.publicUrl,
-          storage_key: signedUpload.key,
-          caption: "",
-          tags: [],
-        }),
-      });
+      const photoResponse = await fetch(
+        `/api/admin/gallery/${galleryId}/photo`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            display_url: signedUpload.publicUrl,
+            storage_key: signedUpload.key,
+            caption: "",
+            tags: [],
+          }),
+        }
+      );
 
-let photoResult: { error?: string } = {};
+      const photoResult = await readJson(photoResponse);
 
-const responseText = await photoResponse.text();
+      if (!photoResponse.ok) {
+        throw new Error(
+          photoResult.error || "Photo record could not be saved."
+        );
+      }
 
-if (responseText) {
-  try {
-    photoResult = JSON.parse(responseText);
-  } catch {
-    photoResult = {};
-  }
-}
-
-if (!photoResponse.ok) {
-  throw new Error(
-    photoResult.error || "Photo record could not be saved."
-  );
-}
       updateUpload(index, { status: "done" });
     } catch (error) {
       updateUpload(index, {
@@ -107,12 +123,11 @@ if (!photoResponse.ok) {
       }
     }
 
-    const workers = Array.from(
-      { length: Math.min(CONCURRENT_UPLOADS, photoFiles.length) },
-      () => worker()
-    );
+    const workerCount = Math.min(CONCURRENT_UPLOADS, photoFiles.length);
 
-    await Promise.all(workers);
+    await Promise.all(
+      Array.from({ length: workerCount }, () => worker())
+    );
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -145,7 +160,7 @@ if (!photoResponse.ok) {
           body: JSON.stringify(body),
         });
 
-        const result = await response.json();
+        const result = await readJson(response);
 
         if (!response.ok) {
           throw new Error(result.error || "Could not update this gallery.");
@@ -159,7 +174,7 @@ if (!photoResponse.ok) {
           body: JSON.stringify(body),
         });
 
-        const result = await response.json();
+        const result = await readJson(response);
 
         if (!response.ok) {
           throw new Error(result.error || "Could not create this gallery.");
@@ -168,22 +183,29 @@ if (!photoResponse.ok) {
         gallery = result;
       }
 
-      if (files.length > 0) {
-        setUploads(
-          files.map((file) => ({
-            name: file.name,
-            status: "waiting",
-          }))
-        );
-
-        setStatus(`Uploading ${files.length} photo${files.length === 1 ? "" : "s"}...`);
-
-        await uploadInBatches(files, gallery.id);
-
-        setStatus("Uploads finished. Review any files marked as failed below.");
-      } else {
-        setStatus("Gallery saved successfully.");
+      if (!gallery?.id) {
+        throw new Error("Gallery could not be identified after saving.");
       }
+
+      if (files.length === 0) {
+        setStatus("Gallery saved successfully.");
+        return;
+      }
+
+      setUploads(
+        files.map((file) => ({
+          name: file.name,
+          status: "waiting",
+        }))
+      );
+
+      setStatus(
+        `Uploading ${files.length} photo${files.length === 1 ? "" : "s"}...`
+      );
+
+      await uploadInBatches(files, gallery.id);
+
+      setStatus("Uploads finished. Review any files marked as failed below.");
     } catch (error) {
       setStatus(
         error instanceof Error
@@ -195,11 +217,11 @@ if (!photoResponse.ok) {
     }
   }
 
-  const completeUploads = uploads.filter(
+  const completedCount = uploads.filter(
     (upload) => upload.status === "done"
   ).length;
 
-  const failedUploads = uploads.filter(
+  const failedCount = uploads.filter(
     (upload) => upload.status === "error"
   ).length;
 
@@ -292,8 +314,8 @@ if (!photoResponse.ok) {
       {uploads.length > 0 && (
         <div className="upload-status" aria-live="polite">
           <p>
-            {completeUploads} of {uploads.length} uploaded
-            {failedUploads ? ` · ${failedUploads} failed` : ""}
+            {completedCount} of {uploads.length} uploaded
+            {failedCount ? ` · ${failedCount} failed` : ""}
           </p>
 
           {uploads.map((upload, index) => (
