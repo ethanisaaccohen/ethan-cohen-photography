@@ -60,8 +60,20 @@ export default async function Page({
           </p>
         </section>
 
-<PhotoGrid photos={photos} galleryTitle={gallery.title} />
+<div className="photos">
+  {photos.map((photo: any) => (
+    <figure key={photo.id}>
+      <img
+        src={photo.display_url}
+        alt={photo.caption || gallery.title}
+      />
 
+      {photo.caption && (
+        <figcaption>{photo.caption}</figcaption>
+      )}
+    </figure>
+  ))}
+</div>
       </main>
     </>
   );
