@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import PhotoGrid from "@/components/PhotoGrid";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -60,27 +61,7 @@ export default async function Page({
           </p>
         </section>
 
- <div className="photos">
-  {photos.map((photo: any) => (
- <figure key={photo.id}>
-  <a
-    href={photo.display_url}
-    target="_blank"
-    rel="noreferrer"
-    aria-label={`Open full-size image: ${photo.caption || gallery.title}`}
-  >
-    <img
-      src={photo.display_url}
-      alt={photo.caption || gallery.title}
-    />
-  </a>
-
-  {photo.caption && (
-    <figcaption>{photo.caption}</figcaption>
-  )}
-</figure>
-  ))}
-</div>
+<PhotoGrid photos={photos} galleryTitle={gallery.title} />
 
       </main>
     </>
