@@ -62,16 +62,23 @@ export default async function Page({
 
  <div className="photos">
   {photos.map((photo: any) => (
-    <figure key={photo.id}>
-      <img
-        src={photo.display_url}
-        alt={photo.caption || gallery.title}
-      />
+ <figure key={photo.id}>
+  <a
+    href={photo.display_url}
+    target="_blank"
+    rel="noreferrer"
+    aria-label={`Open full-size image: ${photo.caption || gallery.title}`}
+  >
+    <img
+      src={photo.display_url}
+      alt={photo.caption || gallery.title}
+    />
+  </a>
 
-      {photo.caption && (
-        <figcaption>{photo.caption}</figcaption>
-      )}
-    </figure>
+  {photo.caption && (
+    <figcaption>{photo.caption}</figcaption>
+  )}
+</figure>
   ))}
 </div>
 
