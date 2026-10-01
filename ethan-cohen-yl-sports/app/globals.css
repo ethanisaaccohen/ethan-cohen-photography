@@ -81,3 +81,7 @@
     padding: 9px 8px;
   }
 }
+.photos figure a {
+  cursor: zoom-in;
+  display: block;
+}
