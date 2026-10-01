@@ -125,7 +125,7 @@ export default function PhotoGrid({
               />
 
               <p className="photo-modal-count">
-                {selectedIndex + 1} / {photos.length}
+ {(selectedIndex ?? 0) + 1} / {photos.length}
               </p>
 
               {selectedPhoto.caption && (
