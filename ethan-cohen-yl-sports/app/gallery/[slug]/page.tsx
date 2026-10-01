@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
+import GalleryLightbox from "@/components/GalleryLightbox";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
-
 
 export const dynamic = "force-dynamic";
 
@@ -60,20 +60,10 @@ export default async function Page({
           </p>
         </section>
 
-<div className="photos">
-  {photos.map((photo: any) => (
-    <figure key={photo.id}>
-      <img
-        src={photo.display_url}
-        alt={photo.caption || gallery.title}
-      />
-
-      {photo.caption && (
-        <figcaption>{photo.caption}</figcaption>
-      )}
-    </figure>
-  ))}
-</div>
+        <GalleryLightbox
+          photos={photos}
+          galleryTitle={gallery.title}
+        />
       </main>
     </>
   );
