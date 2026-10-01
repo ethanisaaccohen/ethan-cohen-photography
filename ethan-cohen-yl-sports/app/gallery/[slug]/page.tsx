@@ -1,5 +1,4 @@
 import Header from "@/components/Header";
-import PhotoGrid from "@/components/PhotoGrid";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
 
