@@ -30,7 +30,7 @@ export default async function Home() {
 
     return {
       ...gallery,
-      cover_url: photos[0]?.display_url ?? null,
+      cover_url: gallery.cover_url || photos[0]?.display_url || null,
       photo_count: photos.length,
     };
   });

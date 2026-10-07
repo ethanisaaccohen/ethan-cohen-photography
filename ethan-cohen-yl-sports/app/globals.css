@@ -452,3 +452,71 @@ a.tag-chip:hover {
     flex-direction: column;
   }
 }
+
+/* Cover photo controls (admin) */
+
+.admin-photo-thumb {
+  position: relative;
+}
+
+.admin-photo-card.is-cover .admin-photo-thumb {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+.cover-badge,
+.set-cover {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 6px 8px;
+  font: 700 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.cover-badge {
+  background: var(--lime);
+  color: var(--black);
+}
+
+.set-cover {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.admin-photo-thumb:hover .set-cover,
+.set-cover:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .set-cover {
+    opacity: 1;
+  }
+}
+
+.cover-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 0 0;
+  color: var(--gray);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.link-button {
+  padding: 0;
+  background: none;
+  color: var(--lime);
+  font: 700 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  text-decoration: underline;
+}
+
+.link-button:disabled {
+  opacity: 0.5;
+}

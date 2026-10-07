@@ -125,14 +125,27 @@ export async function DELETE(
   }
 
   const { photoId } = await params;
+  const db = adminSupabase();
 
-  const { error } = await adminSupabase()
+  const { data: photo } = await db
     .from("photos")
-    .delete()
-    .eq("id", photoId);
+    .select("id, gallery_id, display_url")
+    .eq("id", photoId)
+    .single();
+
+  const { error } = await db.from("photos").delete().eq("id", photoId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // If this photo was the gallery cover, fall back to the automatic cover.
+  if (photo) {
+    await db
+      .from("galleries")
+      .update({ cover_url: null })
+      .eq("id", photo.gallery_id)
+      .eq("cover_url", photo.display_url);
   }
 
   return NextResponse.json({ success: true }, { status: 200 });

@@ -27,15 +27,19 @@ type Props = {
   galleryId: string;
   photos: AdminPhoto[];
   onChange: (photos: AdminPhoto[]) => void;
+  /** The gallery's explicitly chosen cover photo URL (null = automatic). */
+  initialCoverUrl?: string | null;
 };
 
 export default function AdminPhotoManager({
   galleryId,
   photos,
   onChange,
+  initialCoverUrl = null,
 }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | null>(initialCoverUrl);
   const onStatus = setMessage;
   const [bulkTags, setBulkTags] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -62,6 +66,7 @@ export default function AdminPhotoManager({
       }
 
       onChange(photos.filter((current) => current.id !== photo.id));
+      if (coverUrl === photo.display_url) setCoverUrl(null);
       onStatus("Photo removed from this gallery.");
     } catch (error) {
       onStatus(
@@ -107,6 +112,40 @@ export default function AdminPhotoManager({
     } catch (error) {
       onStatus(
         error instanceof Error ? error.message : "Could not save this photo."
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function setCover(photo: AdminPhoto | null) {
+    const nextCover = photo ? photo.display_url : null;
+
+    setBusyId(photo ? photo.id : "cover");
+    onStatus("");
+
+    try {
+      const response = await fetch(`/api/admin/gallery/${galleryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cover_url: nextCover }),
+      });
+
+      const result = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not update the cover photo.");
+      }
+
+      setCoverUrl(result.cover_url ?? null);
+      onStatus(
+        nextCover
+          ? "Cover photo updated. The home page card now uses this photo."
+          : "Cover reset. The newest photo is used automatically."
+      );
+    } catch (error) {
+      onStatus(
+        error instanceof Error ? error.message : "Could not update the cover photo."
       );
     } finally {
       setBusyId(null);
@@ -171,6 +210,24 @@ export default function AdminPhotoManager({
         </span>
       </div>
 
+      {photos.length > 0 && (
+        <p className="cover-status">
+          {coverUrl
+            ? "COVER: CHOSEN PHOTO (marked below)"
+            : "COVER: AUTOMATIC (newest photo)"}
+          {coverUrl && (
+            <button
+              type="button"
+              className="link-button"
+              disabled={busyId !== null}
+              onClick={() => setCover(null)}
+            >
+              USE AUTOMATIC
+            </button>
+          )}
+        </p>
+      )}
+
       {message && (
         <p className="notice" role="status">
           {message}
@@ -220,8 +277,10 @@ export default function AdminPhotoManager({
               key={photo.id}
               photo={photo}
               busy={busyId === photo.id}
+              isCover={coverUrl === photo.display_url}
               onDelete={() => deletePhoto(photo)}
               onSave={(changes) => savePhoto(photo, changes)}
+              onSetCover={() => setCover(photo)}
             />
           ))}
         </div>
@@ -235,13 +294,17 @@ export default function AdminPhotoManager({
 function PhotoCard({
   photo,
   busy,
+  isCover,
   onDelete,
   onSave,
+  onSetCover,
 }: {
   photo: AdminPhoto;
   busy: boolean;
+  isCover: boolean;
   onDelete: () => void;
   onSave: (changes: { caption?: string; tags?: string[] }) => void;
+  onSetCover: () => void;
 }) {
   const savedCaption = photo.caption ?? "";
   const savedTags = photo.tags ?? [];
@@ -274,15 +337,30 @@ function PhotoCard({
   }
 
   return (
-    <article className="admin-photo-card">
-      <img
-        src={thumb.src}
-        srcSet={thumb.srcSet}
-        sizes={thumb.sizes}
-        alt={photo.caption || "Gallery photo"}
-        loading="lazy"
-        decoding="async"
-      />
+    <article className={`admin-photo-card${isCover ? " is-cover" : ""}`}>
+      <div className="admin-photo-thumb">
+        <img
+          src={thumb.src}
+          srcSet={thumb.srcSet}
+          sizes={thumb.sizes}
+          alt={photo.caption || "Gallery photo"}
+          loading="lazy"
+          decoding="async"
+        />
+
+        {isCover ? (
+          <span className="cover-badge">COVER</span>
+        ) : (
+          <button
+            type="button"
+            className="set-cover"
+            disabled={busy}
+            onClick={onSetCover}
+          >
+            SET AS COVER
+          </button>
+        )}
+      </div>
 
       {/* Plain div (not a <form>): this manager renders inside the gallery form. */}
       <div className="caption-form">

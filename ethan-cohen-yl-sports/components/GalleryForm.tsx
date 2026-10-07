@@ -359,6 +359,7 @@ export default function GalleryForm({
       {existing && (
         <AdminPhotoManager
           galleryId={existing.id}
+          initialCoverUrl={existing.cover_url ?? null}
           photos={galleryPhotos}
           onChange={setGalleryPhotos}
         />
