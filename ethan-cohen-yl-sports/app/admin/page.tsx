@@ -18,7 +18,7 @@ export default async function Admin() {
 
   const { data } = await adminSupabase()
     .from("galleries")
-    .select("*, photos(id, display_url, created_at)")
+    .select("*, photos(id, display_url, created_at), favorite_submissions(id)")
     .order("created_at", { ascending: false });
 
   const galleries: AdminGallery[] = (data ?? []).map((gallery: any) => {
@@ -38,6 +38,7 @@ export default async function Admin() {
       is_public: Boolean(gallery.is_public),
       cover_url: gallery.cover_url || photos[0]?.display_url || null,
       photo_count: photos.length,
+      favorites_count: (gallery.favorite_submissions ?? []).length,
     };
   });
 

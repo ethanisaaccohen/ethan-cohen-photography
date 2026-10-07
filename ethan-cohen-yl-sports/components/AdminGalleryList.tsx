@@ -15,6 +15,7 @@ export type AdminGallery = {
   is_public: boolean;
   cover_url: string | null;
   photo_count: number;
+  favorites_count: number;
 };
 
 export default function AdminGalleryList({
@@ -119,6 +120,10 @@ export default function AdminGalleryList({
                   <em className={gallery.is_public ? "is-public" : "is-private"}>
                     {gallery.is_public ? "PUBLIC" : "PRIVATE PROOFING"}
                   </em>
+                  {gallery.favorites_count > 0 &&
+                    ` · ${gallery.favorites_count} FAVORITES SUBMISSION${
+                      gallery.favorites_count === 1 ? "" : "S"
+                    }`}
                 </span>
               </div>
 

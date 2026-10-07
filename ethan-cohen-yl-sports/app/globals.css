@@ -699,3 +699,85 @@ a.tag-chip:hover {
     flex-basis: 100%;
   }
 }
+
+/* Client favorites (admin) */
+
+.favorites-panel {
+  margin-top: 40px;
+}
+
+.favorites-submission {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.favorites-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.favorites-head b {
+  display: block;
+  font-size: 15px;
+}
+
+.favorites-head a {
+  color: var(--lime);
+  font: 11px 'DM Mono', monospace;
+  text-decoration: none;
+}
+
+.favorites-head a:hover {
+  text-decoration: underline;
+}
+
+.favorites-head > span {
+  color: var(--gray);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.favorites-photo {
+  display: block;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: #161616;
+}
+
+.favorites-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.favorites-photo:hover img {
+  opacity: 0.85;
+}
+
+.proof-count {
+  margin: 0 0 6px;
+  color: var(--gray);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.heart:disabled {
+  cursor: default;
+}
+
+.form button:disabled {
+  background: #2a2a2a;
+  color: #7a7a7a;
+  cursor: default;
+}

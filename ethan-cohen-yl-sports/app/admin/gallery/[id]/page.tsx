@@ -4,6 +4,7 @@ import { verifyAdminToken } from "@/lib/auth";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
 import GalleryForm from "@/components/GalleryForm";
+import FavoritesPanel, { type FavoriteSubmission } from "@/components/FavoritesPanel";
 import { tagsFromRelation } from "@/lib/tags";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,32 @@ export default async function Edit({
     tags: tagsFromRelation(photo.photo_tags),
   }));
 
+  const { data: submissionRows } = await db
+    .from("favorite_submissions")
+    .select("id, name, email, created_at, favorite_items(photo_id)")
+    .eq("gallery_id", id)
+    .order("created_at", { ascending: false });
+
+  const photoById = new Map(photos.map((photo) => [photo.id, photo]));
+
+  const submissions: FavoriteSubmission[] = (submissionRows ?? []).map((row: any) => {
+    const ids: string[] = (row.favorite_items ?? []).map((item: any) => item.photo_id);
+    const found = ids.map((photoId) => photoById.get(photoId)).filter(Boolean);
+
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      created_at: row.created_at ?? null,
+      photos: found.map((photo: any) => ({
+        id: photo.id,
+        display_url: photo.display_url,
+        caption: photo.caption ?? null,
+      })),
+      missing: ids.length - found.length,
+    };
+  });
+
   return (
     <main className="page">
       <p className="eyebrow">
@@ -59,6 +86,10 @@ export default async function Edit({
         existing={gallery}
         photos={photos}
       />
+
+      {(!gallery.is_public || submissions.length > 0) && (
+        <FavoritesPanel submissions={submissions} />
+      )}
     </main>
   );
 }
