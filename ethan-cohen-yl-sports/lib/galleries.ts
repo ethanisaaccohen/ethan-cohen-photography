@@ -36,6 +36,11 @@ export function sanitizeGalleryInput(body: Record<string, unknown>): GalleryUpda
     update.is_public = Boolean(body.is_public);
   }
 
+  if (body.slug !== undefined) {
+    // Keep the raw value here; routes decide how to fill an empty slug.
+    update.slug = typeof body.slug === "string" ? slugify(body.slug) : "";
+  }
+
   if (body.cover_url !== undefined) {
     update.cover_url =
       typeof body.cover_url === "string" && body.cover_url.startsWith("https://")
@@ -46,18 +51,38 @@ export function sanitizeGalleryInput(body: Record<string, unknown>): GalleryUpda
   return update;
 }
 
+/** "Sarachek 2026: Tier I!" → "sarachek-2026-tier-i". Only a-z, 0-9 and single dashes survive. */
 export function slugify(value: string) {
   return value
     .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    .replace(/-{2,}/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 80);
+}
+
+export const SLUG_TAKEN_MESSAGE =
+  "That URL is already used by another gallery. Choose a different one.";
+
+/** True when another gallery (not `excludeId`) already uses `slug`. */
+export async function slugTaken(
+  db: { from: (table: string) => any },
+  slug: string,
+  excludeId?: string
+): Promise<boolean> {
+  let query = db.from("galleries").select("id").eq("slug", slug).limit(1);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query;
+  return Array.isArray(data) && data.length > 0;
 }
 
 /** Turn a Postgres/PostgREST error into something a human can act on. */
 export function friendlyGalleryError(message: string) {
   if (/duplicate key|unique/i.test(message) && /slug/i.test(message)) {
-    return "A gallery with this title already exists. Choose a different title.";
+    return SLUG_TAKEN_MESSAGE;
   }
 
   return message;

@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyAdminToken } from "@/lib/auth";
 import { adminSupabase } from "@/lib/supabase";
-import { friendlyGalleryError, sanitizeGalleryInput } from "@/lib/galleries";
+import {
+  SLUG_TAKEN_MESSAGE,
+  friendlyGalleryError,
+  sanitizeGalleryInput,
+  slugTaken,
+  slugify,
+} from "@/lib/galleries";
 
 async function requireAdmin() {
   const token = (await cookies()).get("ec_admin")?.value;
@@ -12,7 +18,7 @@ async function requireAdmin() {
 /**
  * Update gallery details. Only known columns are accepted.
  * Body may include: title, sport, game_date, team_home, team_away,
- * home_score, away_score, is_public, cover_url
+ * home_score, away_score, is_public, cover_url, slug
  */
 export async function PATCH(
   request: NextRequest,
@@ -43,6 +49,31 @@ export async function PATCH(
   }
 
   const db = adminSupabase();
+
+  // Changing the public URL: must be URL-safe, non-empty and unique.
+  if (update.slug !== undefined) {
+    let slug = update.slug as string;
+
+    if (!slug) {
+      // Empty field → derive it from the (new or current) title.
+      let title = typeof update.title === "string" ? update.title : "";
+      if (!title) {
+        const { data: current } = await db
+          .from("galleries")
+          .select("title")
+          .eq("id", id)
+          .single();
+        title = current?.title ?? "";
+      }
+      slug = slugify(title) || "gallery";
+    }
+
+    if (await slugTaken(db, slug, id)) {
+      return NextResponse.json({ error: SLUG_TAKEN_MESSAGE }, { status: 409 });
+    }
+
+    update.slug = slug;
+  }
 
   // A gallery switched to private needs a proofing token so it can be shared.
   if (update.is_public === false) {

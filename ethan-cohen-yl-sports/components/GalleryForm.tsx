@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AdminPhotoManager, { type AdminPhoto as Photo } from "@/components/AdminPhotoManager";
 import ShareLinks from "@/components/ShareLinks";
+import { slugify } from "@/lib/galleries";
 
 type GalleryFormProps = {
   existing?: any;
@@ -41,6 +42,13 @@ export default function GalleryForm({
   const [isSaving, setIsSaving] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<Photo[]>(photos);
   const [galleryMeta, setGalleryMeta] = useState<any>(existing ?? null);
+  const [slug, setSlug] = useState<string>(existing?.slug ?? "");
+  const [slugTouched, setSlugTouched] = useState<boolean>(Boolean(existing));
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   function updateUpload(index: number, update: Partial<UploadState>) {
     setUploads((current) =>
@@ -186,6 +194,7 @@ export default function GalleryForm({
 
         gallery = result;
         setGalleryMeta(result);
+        if (result.slug) setSlug(result.slug);
       } else {
         const response = await fetch("/api/admin/gallery", {
           method: "POST",
@@ -252,8 +261,46 @@ export default function GalleryForm({
     <form className="form" onSubmit={submit}>
       <label>
         GALLERY TITLE
-        <input name="title" required defaultValue={existing?.title || ""} />
+        <input
+          name="title"
+          required
+          defaultValue={existing?.title || ""}
+          onChange={(event) => {
+            // New galleries: suggest a URL from the title until the admin edits it.
+            if (!slugTouched) setSlug(slugify(event.target.value));
+          }}
+        />
       </label>
+
+      <label htmlFor="gallery-slug">GALLERY URL</label>
+      <div className="slug-field">
+        <span className="slug-prefix">/gallery/</span>
+        <input
+          id="gallery-slug"
+          name="slug"
+          className="slug-input"
+          value={slug}
+          placeholder={existing ? "" : "auto-generated from title"}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => {
+            setSlugTouched(true);
+            // Keep it URL-safe as they type, but allow a trailing dash mid-edit.
+            const raw = event.target.value.toLowerCase();
+            const cleaned = raw.replace(/[^a-z0-9-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-/, "");
+            setSlug(cleaned);
+          }}
+          onBlur={() => setSlug((current) => slugify(current))}
+        />
+      </div>
+      <p className="field-hint slug-hint">
+        {slug
+          ? `Public link will be ${origin}/gallery/${slug}`
+          : "Leave empty to generate the URL from the title."}
+        {galleryMeta && slug !== galleryMeta.slug && slug
+          ? " Changing this breaks any links you already shared."
+          : ""}
+      </p>
 
       <label>
         SPORT

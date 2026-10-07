@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyAdminToken } from "@/lib/auth";
 import { adminSupabase } from "@/lib/supabase";
-import { friendlyGalleryError, sanitizeGalleryInput, slugify } from "@/lib/galleries";
+import {
+  SLUG_TAKEN_MESSAGE,
+  friendlyGalleryError,
+  sanitizeGalleryInput,
+  slugTaken,
+  slugify,
+} from "@/lib/galleries";
 
 export async function POST(request: NextRequest) {
   const token = (await cookies()).get("ec_admin")?.value;
@@ -27,17 +33,27 @@ export async function POST(request: NextRequest) {
   }
 
   const db = adminSupabase();
-  const baseSlug = slugify(title) || "gallery";
+  const customSlug = typeof row.slug === "string" ? row.slug : "";
+  let slug: string;
 
-  // Make the slug unique: "frisch", "frisch-2", "frisch-3", …
-  const { data: taken } = await db
-    .from("galleries")
-    .select("slug")
-    .like("slug", `${baseSlug}%`);
+  if (customSlug) {
+    // Admin typed a URL explicitly: use it, but never silently rename it.
+    if (await slugTaken(db, customSlug)) {
+      return NextResponse.json({ error: SLUG_TAKEN_MESSAGE }, { status: 409 });
+    }
+    slug = customSlug;
+  } else {
+    // Derive from the title and make it unique: "frisch", "frisch-2", "frisch-3", …
+    const baseSlug = slugify(title) || "gallery";
+    const { data: taken } = await db
+      .from("galleries")
+      .select("slug")
+      .like("slug", `${baseSlug}%`);
 
-  const takenSlugs = new Set((taken ?? []).map((g: { slug: string }) => g.slug));
-  let slug = baseSlug;
-  for (let n = 2; takenSlugs.has(slug); n += 1) slug = `${baseSlug}-${n}`;
+    const takenSlugs = new Set((taken ?? []).map((g: { slug: string }) => g.slug));
+    slug = baseSlug;
+    for (let n = 2; takenSlugs.has(slug); n += 1) slug = `${baseSlug}-${n}`;
+  }
 
   const isPublic = row.is_public !== false;
 
