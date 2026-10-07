@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminPhotoManager, { type AdminPhoto as Photo } from "@/components/AdminPhotoManager";
+import ShareLinks from "@/components/ShareLinks";
 
 type GalleryFormProps = {
   existing?: any;
@@ -39,6 +40,7 @@ export default function GalleryForm({
   const [uploads, setUploads] = useState<UploadState[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<Photo[]>(photos);
+  const [galleryMeta, setGalleryMeta] = useState<any>(existing ?? null);
 
   function updateUpload(index: number, update: Partial<UploadState>) {
     setUploads((current) =>
@@ -183,6 +185,7 @@ export default function GalleryForm({
         }
 
         gallery = result;
+        setGalleryMeta(result);
       } else {
         const response = await fetch("/api/admin/gallery", {
           method: "POST",
@@ -355,6 +358,14 @@ export default function GalleryForm({
       )}
 
     </form>
+
+      {existing && galleryMeta && (
+        <ShareLinks
+          slug={galleryMeta.slug}
+          isPublic={Boolean(galleryMeta.is_public)}
+          proofToken={galleryMeta.proof_token ?? null}
+        />
+      )}
 
       {existing && (
         <AdminPhotoManager

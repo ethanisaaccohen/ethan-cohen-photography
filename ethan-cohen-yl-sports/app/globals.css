@@ -520,3 +520,182 @@ a.tag-chip:hover {
 .link-button:disabled {
   opacity: 0.5;
 }
+
+/* Admin dashboard */
+
+.admin-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.admin-topbar .eyebrow {
+  margin: 0;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--cream);
+  border: 1px solid #444;
+}
+
+.button.secondary:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+
+/* The huge title's tight line-height overlaps the eyebrow; keep its links clickable. */
+.eyebrow {
+  position: relative;
+  z-index: 1;
+}
+
+.eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.eyebrow a:hover {
+  text-decoration: underline;
+}
+
+.admin-gallery-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-gallery-cover {
+  display: block;
+  text-decoration: none;
+  aspect-ratio: 3 / 2;
+  background: #161616;
+  overflow: hidden;
+}
+
+.admin-gallery-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-gallery-nocover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.admin-gallery-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-gallery-info b {
+  font-size: 16px;
+}
+
+.admin-gallery-info span {
+  color: var(--gray);
+  font: 11px 'DM Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.admin-gallery-info em {
+  font-style: normal;
+}
+
+.admin-gallery-info .is-public {
+  color: var(--lime);
+}
+
+.admin-gallery-info .is-private {
+  color: #f0b24a;
+}
+
+.admin-gallery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-gallery-actions .button,
+.admin-gallery-actions .delete-photo {
+  padding: 10px 14px;
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .admin-gallery-row {
+    grid-template-columns: 90px 1fr;
+  }
+
+  .admin-gallery-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+/* Share links */
+
+.share-links {
+  margin-top: 40px;
+  padding: 18px;
+  border: 1px solid #333;
+  background: #121212;
+}
+
+.share-links .sectionhead {
+  margin: 0 0 14px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.share-row {
+  display: flex;
+  gap: 8px;
+}
+
+.share-url {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  background: #161616;
+  color: var(--cream);
+  border: 1px solid #444;
+  font: 12px 'DM Mono', monospace;
+}
+
+.share-copy,
+.share-open {
+  white-space: nowrap;
+  padding: 10px 14px;
+  font-size: 11px;
+}
+
+@media (max-width: 600px) {
+  .share-row {
+    flex-wrap: wrap;
+  }
+
+  .share-url {
+    flex-basis: 100%;
+  }
+}

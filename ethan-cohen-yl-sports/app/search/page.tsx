@@ -125,9 +125,11 @@ function SearchClient() {
                   <br />
                   {gallery.sport ?? ""}
                   {gallery.game_date ? ` · ${gallery.game_date}` : ""}
-                  {gallery.team_home || gallery.team_away
-                    ? ` · ${gallery.team_home ?? ""} vs. ${gallery.team_away ?? ""}`
-                    : ""}
+                  {gallery.team_home && gallery.team_away
+                    ? ` · ${gallery.team_home} vs. ${gallery.team_away}`
+                    : gallery.team_home || gallery.team_away
+                      ? ` · ${gallery.team_home || gallery.team_away}`
+                      : ""}
                 </span>
                 <strong className="search-count">
                   {gallery.photo_count} PHOTO{gallery.photo_count === 1 ? "" : "S"}
