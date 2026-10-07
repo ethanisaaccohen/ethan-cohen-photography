@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { smallThumb } from "@/lib/images";
 
 type Photo = {
   id: string;
@@ -408,11 +409,18 @@ export default function GalleryForm({
 
           {galleryPhotos.length ? (
             <div className="admin-photo-grid">
-              {galleryPhotos.map((photo) => (
+              {galleryPhotos.map((photo) => {
+                const thumb = smallThumb(photo.display_url);
+
+                return (
                 <article className="admin-photo-card" key={photo.id}>
                   <img
-                    src={photo.display_url}
+                    src={thumb.src}
+                    srcSet={thumb.srcSet}
+                    sizes={thumb.sizes}
                     alt={photo.caption || "Gallery photo"}
+                    loading="lazy"
+                    decoding="async"
                   />
 
                   <button
@@ -426,7 +434,8 @@ export default function GalleryForm({
                       : "DELETE PHOTO"}
                   </button>
                 </article>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="empty">NO PHOTOS IN THIS GALLERY YET.</p>

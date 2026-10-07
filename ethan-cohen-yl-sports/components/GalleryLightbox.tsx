@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { gridThumb, lightboxImage } from "@/lib/images";
 
 type Photo = {
   id: string;
@@ -17,31 +18,30 @@ export default function GalleryLightbox({
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const activePhoto =
-    activeIndex === null ? null : photos[activeIndex];
+  const activePhoto = activeIndex === null ? null : photos[activeIndex];
 
-  function close() {
-    setActiveIndex(null);
-  }
+  const close = useCallback(() => setActiveIndex(null), []);
 
-  function previous() {
-    if (activeIndex === null) return;
-
-    setActiveIndex(
-      (activeIndex - 1 + photos.length) % photos.length
+  const previous = useCallback(() => {
+    setActiveIndex((current) =>
+      current === null ? null : (current - 1 + photos.length) % photos.length
     );
-  }
+  }, [photos.length]);
 
-  function next() {
+  const next = useCallback(() => {
+    setActiveIndex((current) =>
+      current === null ? null : (current + 1) % photos.length
+    );
+  }, [photos.length]);
+
+  // Keyboard controls + lock page scroll while the overlay is open.
+  useEffect(() => {
     if (activeIndex === null) return;
 
-    setActiveIndex((activeIndex + 1) % photos.length);
-  }
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (activeIndex === null) return;
-
       if (event.key === "Escape") close();
       if (event.key === "ArrowLeft") previous();
       if (event.key === "ArrowRight") next();
@@ -50,39 +50,47 @@ export default function GalleryLightbox({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeIndex, photos.length]);
+  }, [activeIndex, close, previous, next]);
+
+  if (!photos.length) {
+    return <p className="empty">NO PHOTOS YET.</p>;
+  }
 
   return (
     <>
       <div className="photos">
-        {photos.map((photo, index) => (
-          <figure key={photo.id}>
-            <button
-              type="button"
-              className="photo-trigger"
-              onClick={() => setActiveIndex(index)}
-              aria-label={`Open ${photo.caption || galleryTitle}`}
-            >
-              <img
-                src={photo.display_url}
-                alt={photo.caption || galleryTitle}
-              />
-            </button>
+        {photos.map((photo, index) => {
+          const thumb = gridThumb(photo.display_url);
 
-            {photo.caption && (
-              <figcaption>{photo.caption}</figcaption>
-            )}
-          </figure>
-        ))}
+          return (
+            <figure key={photo.id}>
+              <button
+                type="button"
+                className="photo-trigger"
+                onClick={() => setActiveIndex(index)}
+                aria-label={`Open photo ${index + 1} of ${photos.length}`}
+              >
+                <img
+                  src={thumb.src}
+                  srcSet={thumb.srcSet}
+                  sizes={thumb.sizes}
+                  alt={photo.caption || `${galleryTitle} photo ${index + 1}`}
+                  loading={index < 6 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </button>
+
+              {photo.caption && <figcaption>{photo.caption}</figcaption>}
+            </figure>
+          );
+        })}
       </div>
 
-      {activePhoto && (
-        <div
-          className="lightbox-backdrop"
-          onMouseDown={close}
-        >
+      {activePhoto && activeIndex !== null && (
+        <div className="lightbox-backdrop" onMouseDown={close}>
           <section
             className="lightbox"
             role="dialog"
@@ -99,41 +107,57 @@ export default function GalleryLightbox({
               ×
             </button>
 
-            <button
-              type="button"
-              className="lightbox-prev"
-              onClick={previous}
-              aria-label="Previous image"
-            >
-              ←
-            </button>
+            {photos.length > 1 && (
+              <button
+                type="button"
+                className="lightbox-prev"
+                onClick={previous}
+                aria-label="Previous image"
+              >
+                ←
+              </button>
+            )}
 
-            <img
-              className="lightbox-image"
-              src={activePhoto.display_url}
-              alt={activePhoto.caption || galleryTitle}
-            />
+            {(() => {
+              const large = lightboxImage(activePhoto.display_url);
 
-            <button
-              type="button"
-              className="lightbox-next"
-              onClick={next}
-              aria-label="Next image"
-            >
-              →
-            </button>
+              return (
+                <img
+                  key={activePhoto.id}
+                  className="lightbox-image"
+                  src={large.src}
+                  srcSet={large.srcSet}
+                  sizes={large.sizes}
+                  alt={activePhoto.caption || galleryTitle}
+                  decoding="async"
+                />
+              );
+            })()}
+
+            {photos.length > 1 && (
+              <button
+                type="button"
+                className="lightbox-next"
+                onClick={next}
+                aria-label="Next image"
+              >
+                →
+              </button>
+            )}
 
             <div className="lightbox-footer">
-              {activePhoto.caption && (
-                <p>{activePhoto.caption}</p>
-              )}
+              <p className="lightbox-count">
+                {activeIndex + 1} / {photos.length}
+                {activePhoto.caption ? ` · ${activePhoto.caption}` : ""}
+              </p>
 
               <a
                 href={activePhoto.display_url}
                 target="_blank"
                 rel="noreferrer"
+                download
               >
-                Open full size
+                Download original ↗
               </a>
             </div>
           </section>
