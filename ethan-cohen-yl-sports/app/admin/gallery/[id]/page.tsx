@@ -1,5 +1,6 @@
 import { adminSupabase } from "@/lib/supabase";
 import GalleryForm from "@/components/GalleryForm";
+import { tagsFromRelation } from "@/lib/tags";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +18,18 @@ export default async function Edit({
     .eq("id", id)
     .single();
 
-  const { data: photos } = await db
+  const { data: photoRows } = await db
     .from("photos")
-    .select("id, display_url, caption")
+    .select("id, display_url, caption, photo_tags(tag)")
     .eq("gallery_id", id)
     .order("created_at", { ascending: false });
+
+  const photos = (photoRows ?? []).map((photo: any) => ({
+    id: photo.id,
+    display_url: photo.display_url,
+    caption: photo.caption,
+    tags: tagsFromRelation(photo.photo_tags),
+  }));
 
   return (
     <main className="page">
@@ -35,7 +43,7 @@ export default async function Edit({
 
       <GalleryForm
         existing={gallery}
-        photos={photos ?? []}
+        photos={photos}
       />
     </main>
   );

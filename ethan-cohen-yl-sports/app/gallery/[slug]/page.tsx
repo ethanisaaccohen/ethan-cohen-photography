@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import GalleryLightbox from "@/components/GalleryLightbox";
 import { adminSupabase } from "@/lib/supabase";
 import Link from "next/link";
+import { tagsFromRelation } from "@/lib/tags";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +34,16 @@ export default async function Page({
 
   const { data: photoRows } = await db
     .from("photos")
-    .select("*")
+    .select("*, photo_tags(tag)")
     .eq("gallery_id", gallery.id)
     .order("taken_at", { ascending: false });
 
-  const photos = photoRows ?? [];
+  const photos = (photoRows ?? []).map((photo: any) => ({
+    id: photo.id as string,
+    display_url: photo.display_url as string,
+    caption: (photo.caption ?? null) as string | null,
+    tags: tagsFromRelation(photo.photo_tags),
+  }));
 
   return (
     <>

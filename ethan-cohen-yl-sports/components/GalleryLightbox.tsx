@@ -7,6 +7,7 @@ type Photo = {
   id: string;
   display_url: string;
   caption: string | null;
+  tags?: string[];
 };
 
 export default function GalleryLightbox({
@@ -33,6 +34,16 @@ export default function GalleryLightbox({
       current === null ? null : (current + 1) % photos.length
     );
   }, [photos.length]);
+
+  // Deep link: /gallery/<slug>?photo=<id> opens that photo (used by Search results).
+  useEffect(() => {
+    const photoId = new URLSearchParams(window.location.search).get("photo");
+    if (!photoId) return;
+
+    const index = photos.findIndex((photo) => photo.id === photoId);
+    if (index >= 0) setActiveIndex(index);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keyboard controls + lock page scroll while the overlay is open.
   useEffect(() => {
@@ -146,10 +157,26 @@ export default function GalleryLightbox({
             )}
 
             <div className="lightbox-footer">
-              <p className="lightbox-count">
-                {activeIndex + 1} / {photos.length}
-                {activePhoto.caption ? ` · ${activePhoto.caption}` : ""}
-              </p>
+              <div className="lightbox-meta">
+                <p className="lightbox-count">
+                  {activeIndex + 1} / {photos.length}
+                  {activePhoto.caption ? ` · ${activePhoto.caption}` : ""}
+                </p>
+
+                {activePhoto.tags && activePhoto.tags.length > 0 && (
+                  <p className="lightbox-tags">
+                    {activePhoto.tags.map((tag) => (
+                      <a
+                        key={tag}
+                        className="tag-chip"
+                        href={`/search?q=${encodeURIComponent(tag)}`}
+                      >
+                        {tag}
+                      </a>
+                    ))}
+                  </p>
+                )}
+              </div>
 
               <a
                 href={activePhoto.display_url}

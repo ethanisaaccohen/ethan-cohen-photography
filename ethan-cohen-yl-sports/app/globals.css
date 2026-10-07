@@ -296,3 +296,159 @@
     gap: 8px;
   }
 }
+
+/* Tags (admin) */
+
+.tags-input {
+  width: 100%;
+  margin: 0;
+  padding: 9px 10px;
+  resize: vertical;
+  min-height: 40px;
+  background: #161616;
+  color: var(--cream);
+  border: 1px solid #444;
+  font: 12px/1.5 'DM Mono', monospace;
+}
+
+.bulk-tags .tags-input {
+  min-height: 0;
+  resize: none;
+}
+
+.tags-input:focus {
+  outline: none;
+  border-color: var(--lime);
+}
+
+.tags-input:disabled {
+  opacity: 0.6;
+}
+
+.bulk-tags {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #333;
+  background: #121212;
+}
+
+.bulk-tags label {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--gray);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.bulk-tags-row {
+  display: flex;
+  gap: 8px;
+}
+
+.bulk-tags-button {
+  white-space: nowrap;
+  padding: 10px 14px;
+  font-size: 11px;
+}
+
+.bulk-tags-button:disabled {
+  background: #2a2a2a;
+  color: #7a7a7a;
+  cursor: default;
+}
+
+.field-hint {
+  margin: 10px 0 0;
+  color: #7a7a7a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Tag chips (public) */
+
+.tag-chip {
+  display: inline-block;
+  margin: 0 6px 6px 0;
+  padding: 4px 8px;
+  border: 1px solid #3a3a3a;
+  color: var(--cream);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+a.tag-chip:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+
+.lightbox-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lightbox-tags {
+  margin: 0;
+  line-height: 1;
+}
+
+/* Search page */
+
+.search-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.search-form .search {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-form button {
+  white-space: nowrap;
+}
+
+.search-section {
+  margin-top: 40px;
+}
+
+.search-count {
+  font: 11px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  color: var(--lime);
+  white-space: nowrap;
+}
+
+.search-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.search-card small {
+  display: block;
+  margin-top: 8px;
+  color: var(--gray);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.search-tags {
+  display: block;
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .search-form {
+    flex-direction: column;
+  }
+
+  .bulk-tags-row {
+    flex-direction: column;
+  }
+}

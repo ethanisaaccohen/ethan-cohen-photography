@@ -245,6 +245,7 @@ export default function GalleryForm({
   ).length;
 
   return (
+    <>
     <form className="form" onSubmit={submit}>
       <label>
         GALLERY TITLE
@@ -353,13 +354,15 @@ export default function GalleryForm({
         </div>
       )}
 
+    </form>
+
       {existing && (
         <AdminPhotoManager
+          galleryId={existing.id}
           photos={galleryPhotos}
           onChange={setGalleryPhotos}
-          onStatus={setStatus}
         />
       )}
-    </form>
+    </>
   );
 }

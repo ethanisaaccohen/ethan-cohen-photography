@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { smallThumb } from "@/lib/images";
+import { parseTags } from "@/lib/tags";
 
 export type AdminPhoto = {
   id: string;
   display_url: string;
   caption?: string | null;
+  tags?: string[];
 };
 
 async function readJson(response: Response) {
@@ -22,17 +24,21 @@ async function readJson(response: Response) {
 }
 
 type Props = {
+  galleryId: string;
   photos: AdminPhoto[];
   onChange: (photos: AdminPhoto[]) => void;
-  onStatus: (message: string) => void;
 };
 
 export default function AdminPhotoManager({
+  galleryId,
   photos,
   onChange,
-  onStatus,
 }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const onStatus = setMessage;
+  const [bulkTags, setBulkTags] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   async function deletePhoto(photo: AdminPhoto) {
     const confirmed = window.confirm(
@@ -66,7 +72,10 @@ export default function AdminPhotoManager({
     }
   }
 
-  async function saveCaption(photo: AdminPhoto, caption: string) {
+  async function savePhoto(
+    photo: AdminPhoto,
+    changes: { caption?: string; tags?: string[] }
+  ) {
     setBusyId(photo.id);
     onStatus("");
 
@@ -74,29 +83,82 @@ export default function AdminPhotoManager({
       const response = await fetch(`/api/admin/photos/${photo.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caption }),
+        body: JSON.stringify(changes),
       });
 
       const result = await readJson(response);
 
       if (!response.ok) {
-        throw new Error(result.error || "Could not save the caption.");
+        throw new Error(result.error || "Could not save this photo.");
       }
 
       onChange(
         photos.map((current) =>
           current.id === photo.id
-            ? { ...current, caption: result.caption ?? caption }
+            ? {
+                ...current,
+                caption: result.caption ?? current.caption ?? "",
+                tags: Array.isArray(result.tags) ? result.tags : current.tags,
+              }
             : current
         )
       );
-      onStatus("Caption saved.");
+      onStatus("Photo saved.");
     } catch (error) {
       onStatus(
-        error instanceof Error ? error.message : "Could not save the caption."
+        error instanceof Error ? error.message : "Could not save this photo."
       );
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function applyBulkTags() {
+    const tags = parseTags(bulkTags);
+
+    if (tags.length === 0 || bulkBusy) return;
+
+    setBulkBusy(true);
+    onStatus("");
+
+    try {
+      const response = await fetch(`/api/admin/gallery/${galleryId}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags }),
+      });
+
+      const result = await readJson(response);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not add tags.");
+      }
+
+      // Merge the new tags into every photo locally.
+      onChange(
+        photos.map((photo) => {
+          const existing = photo.tags ?? [];
+          const lower = new Set(existing.map((tag) => tag.toLowerCase()));
+          const merged = [...existing];
+
+          for (const tag of tags) {
+            if (!lower.has(tag.toLowerCase())) merged.push(tag);
+          }
+
+          return { ...photo, tags: merged };
+        })
+      );
+
+      setBulkTags("");
+      onStatus(
+        `Added ${result.added} tag${result.added === 1 ? "" : "s"} across ${
+          result.photos
+        } photo${result.photos === 1 ? "" : "s"}.`
+      );
+    } catch (error) {
+      onStatus(error instanceof Error ? error.message : "Could not add tags.");
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -109,6 +171,48 @@ export default function AdminPhotoManager({
         </span>
       </div>
 
+      {message && (
+        <p className="notice" role="status">
+          {message}
+        </p>
+      )}
+
+      {photos.length > 0 && (
+        <div className="bulk-tags">
+          <label htmlFor="bulk-tags-input">
+            TAG EVERY PHOTO IN THIS GALLERY
+          </label>
+          <div className="bulk-tags-row">
+            <input
+              id="bulk-tags-input"
+              className="tags-input"
+              value={bulkTags}
+              placeholder="e.g. Frisch, DRS, Sarachek"
+              disabled={bulkBusy}
+              onChange={(event) => setBulkTags(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applyBulkTags();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="bulk-tags-button"
+              disabled={bulkBusy || parseTags(bulkTags).length === 0}
+              onClick={applyBulkTags}
+            >
+              {bulkBusy ? "ADDING…" : "ADD TO ALL"}
+            </button>
+          </div>
+          <p className="field-hint">
+            Separate tags with commas. Team names and player names make
+            photos findable on the public Search page.
+          </p>
+        </div>
+      )}
+
       {photos.length ? (
         <div className="admin-photo-grid">
           {photos.map((photo) => (
@@ -117,7 +221,7 @@ export default function AdminPhotoManager({
               photo={photo}
               busy={busyId === photo.id}
               onDelete={() => deletePhoto(photo)}
-              onSaveCaption={(caption) => saveCaption(photo, caption)}
+              onSave={(changes) => savePhoto(photo, changes)}
             />
           ))}
         </div>
@@ -132,17 +236,42 @@ function PhotoCard({
   photo,
   busy,
   onDelete,
-  onSaveCaption,
+  onSave,
 }: {
   photo: AdminPhoto;
   busy: boolean;
   onDelete: () => void;
-  onSaveCaption: (caption: string) => void;
+  onSave: (changes: { caption?: string; tags?: string[] }) => void;
 }) {
-  const saved = photo.caption ?? "";
-  const [draft, setDraft] = useState(saved);
-  const dirty = draft.trim() !== saved.trim();
+  const savedCaption = photo.caption ?? "";
+  const savedTags = photo.tags ?? [];
+
+  const [caption, setCaption] = useState(savedCaption);
+  const [tagText, setTagText] = useState(savedTags.join(", "));
+
+  // Keep the inputs in sync when the saved value changes from outside
+  // (e.g. the bulk tag tool added tags to this photo).
+  useEffect(() => {
+    setTagText(savedTags.join(", "));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedTags.join("\u0000")]);
+
+  const captionDirty = caption.trim() !== savedCaption.trim();
+  const tagsDirty =
+    parseTags(tagText).join("\u0000").toLowerCase() !==
+    savedTags.join("\u0000").toLowerCase();
+  const dirty = captionDirty || tagsDirty;
+
   const thumb = smallThumb(photo.display_url);
+
+  function save() {
+    if (!dirty || busy) return;
+
+    const changes: { caption?: string; tags?: string[] } = {};
+    if (captionDirty) changes.caption = caption;
+    if (tagsDirty) changes.tags = parseTags(tagText);
+    onSave(changes);
+  }
 
   return (
     <article className="admin-photo-card">
@@ -159,17 +288,33 @@ function PhotoCard({
       <div className="caption-form">
         <textarea
           className="caption-input"
-          value={draft}
+          value={caption}
           placeholder="Add a caption…"
           rows={2}
           maxLength={500}
           disabled={busy}
           aria-label="Photo caption"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => setCaption(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              if (dirty && !busy) onSaveCaption(draft);
+              save();
+            }
+          }}
+        />
+
+        <textarea
+          className="tags-input"
+          value={tagText}
+          placeholder="Tags: players, teams… (comma separated)"
+          rows={Math.min(6, Math.max(2, Math.ceil(tagText.length / 26)))}
+          disabled={busy}
+          aria-label="Photo tags, comma separated"
+          onChange={(event) => setTagText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              save();
             }
           }}
         />
@@ -179,11 +324,9 @@ function PhotoCard({
             className="save-caption"
             type="button"
             disabled={!dirty || busy}
-            onClick={() => {
-              if (dirty && !busy) onSaveCaption(draft);
-            }}
+            onClick={save}
           >
-            {busy ? "SAVING…" : dirty ? "SAVE CAPTION" : "SAVED"}
+            {busy ? "SAVING…" : dirty ? "SAVE" : "SAVED"}
           </button>
 
           <button
