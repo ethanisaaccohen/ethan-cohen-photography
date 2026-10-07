@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { smallThumb } from "@/lib/images";
+import { useCallback, useState } from "react";
+import { gridThumb } from "@/lib/images";
+import Lightbox from "@/components/Lightbox";
 
 export default function ProofingClient({ gallery, photos }: any) {
   const [picked, setPicked] = useState<string[]>([]);
@@ -10,6 +11,17 @@ export default function ProofingClient({ gallery, photos }: any) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const closeLightbox = useCallback(() => setActiveIndex(null), []);
+
+  function toggle(photoId: string) {
+    if (sent) return;
+    setPicked((current) =>
+      current.includes(photoId)
+        ? current.filter((id) => id !== photoId)
+        : [...current, photoId]
+    );
+  }
 
   async function submit() {
     if (sending || sent) return;
@@ -67,40 +79,65 @@ export default function ProofingClient({ gallery, photos }: any) {
       <p className="eyebrow">PRIVATE CLIENT PROOFING</p>
       <h1 className="title">{gallery.title}</h1>
       <p className="intro">
-        Tap the heart on the photos you want. Then send Ethan your selection.
+        Tap a photo to see it full size. Tap ♡ on the ones you want, then send
+        Ethan your selection.
       </p>
 
       <div className="proofGrid">
-        {photos.map((p: any) => {
-          const thumb = smallThumb(p.display_url);
+        {photos.map((p: any, index: number) => {
+          const thumb = gridThumb(p.display_url);
+          const isPicked = picked.includes(p.id);
 
           return (
-            <div className="proofCard" key={p.id}>
-              <img
-                src={thumb.src}
-                srcSet={thumb.srcSet}
-                sizes={thumb.sizes}
-                alt="Proof"
-                loading="lazy"
-                decoding="async"
-              />
+            <div className={`proofCard${isPicked ? " is-picked" : ""}`} key={p.id}>
+              <button
+                type="button"
+                className="photo-trigger"
+                onClick={() => setActiveIndex(index)}
+                aria-label={`View photo ${index + 1} of ${photos.length} full size`}
+              >
+                <img
+                  src={thumb.src}
+                  srcSet={thumb.srcSet}
+                  sizes={thumb.sizes}
+                  alt={p.caption || `Proof ${index + 1}`}
+                  loading={index < 6 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </button>
               <button
                 className="heart"
                 type="button"
                 disabled={sent}
-                aria-pressed={picked.includes(p.id)}
-                onClick={() =>
-                  setPicked((x) =>
-                    x.includes(p.id) ? x.filter((i) => i !== p.id) : [...x, p.id]
-                  )
-                }
+                aria-pressed={isPicked}
+                onClick={() => toggle(p.id)}
               >
-                {picked.includes(p.id) ? "♥ FAVORITE" : "♡ FAVORITE"}
+                {isPicked ? "♥ FAVORITE" : "♡ FAVORITE"}
               </button>
             </div>
           );
         })}
       </div>
+
+      <Lightbox
+        photos={photos}
+        activeIndex={activeIndex}
+        onNavigate={setActiveIndex}
+        onClose={closeLightbox}
+        title={gallery.title}
+        allowDownload={false}
+        renderActions={(photo) => (
+          <button
+            className="heart lightbox-heart"
+            type="button"
+            disabled={sent}
+            aria-pressed={picked.includes(photo.id)}
+            onClick={() => toggle(photo.id)}
+          >
+            {picked.includes(photo.id) ? "♥ FAVORITE" : "♡ FAVORITE"}
+          </button>
+        )}
+      />
 
       <div className="form" style={{ marginTop: 35 }}>
         <p className="proof-count">

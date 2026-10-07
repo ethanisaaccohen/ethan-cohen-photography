@@ -816,3 +816,53 @@ a.tag-chip:hover {
   min-width: min(70vw, 900px);
   min-height: min(50vh, 600px);
 }
+
+/* Proofing cards + lightbox actions */
+
+.proofCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proofCard .photo-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: #161616;
+  border: 2px solid transparent;
+  cursor: zoom-in;
+}
+
+.proofCard.is-picked .photo-trigger {
+  border-color: var(--lime);
+}
+
+.proofCard .heart {
+  align-self: flex-start;
+  font: 700 11px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.proofCard .heart[aria-pressed="true"] {
+  background: var(--lime);
+  color: var(--black);
+}
+
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.lightbox-heart {
+  padding: 8px 12px;
+  font: 700 11px 'DM Mono', monospace;
+  letter-spacing: 1px;
+}
+
+.lightbox-heart[aria-pressed="true"] {
+  background: var(--lime);
+  color: var(--black);
+}
