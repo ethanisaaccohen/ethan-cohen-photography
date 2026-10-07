@@ -781,3 +781,38 @@ a.tag-chip:hover {
   color: #7a7a7a;
   cursor: default;
 }
+
+/* Lightbox loading state + swipe */
+
+.lightbox {
+  touch-action: pan-y;
+}
+
+.lightbox-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  color: var(--gray);
+  font: 11px 'DM Mono', monospace;
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+
+.lightbox-image {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lightbox-image.is-loaded {
+  opacity: 1;
+}
+
+/* Hold space while the large image loads so the footer doesn't jump. */
+.lightbox-image:not(.is-loaded) {
+  min-width: min(70vw, 900px);
+  min-height: min(50vh, 600px);
+}

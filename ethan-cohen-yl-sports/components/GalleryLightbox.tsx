@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gridThumb, lightboxImage } from "@/lib/images";
 
 type Photo = {
@@ -18,6 +18,10 @@ export default function GalleryLightbox({
   galleryTitle: string;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const closeButton = useRef<HTMLButtonElement | null>(null);
+  const lastTrigger = useRef<HTMLElement | null>(null);
 
   const activePhoto = activeIndex === null ? null : photos[activeIndex];
 
@@ -44,6 +48,77 @@ export default function GalleryLightbox({
     if (index >= 0) setActiveIndex(index);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep ?photo=<id> in the address bar so the open photo can be shared / reloaded.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get("photo");
+    const wanted = activePhoto ? activePhoto.id : null;
+
+    if (current === wanted) return;
+
+    if (wanted) url.searchParams.set("photo", wanted);
+    else url.searchParams.delete("photo");
+
+    window.history.replaceState(window.history.state, "", url);
+  }, [activePhoto]);
+
+  // Preload the neighbours so arrows / swipes feel instant.
+  useEffect(() => {
+    if (activeIndex === null || photos.length < 2) return;
+
+    const neighbours = [
+      photos[(activeIndex + 1) % photos.length],
+      photos[(activeIndex - 1 + photos.length) % photos.length],
+    ];
+
+    const preloaded = neighbours.map((photo) => {
+      const large = lightboxImage(photo.display_url);
+      const image = new Image();
+      if (large.sizes) image.sizes = large.sizes;
+      if (large.srcSet) image.srcset = large.srcSet;
+      image.src = large.src;
+      return image;
+    });
+
+    return () => {
+      // Dropping the references lets the browser cancel anything still in flight.
+      preloaded.forEach((image) => {
+        image.src = "";
+      });
+    };
+  }, [activeIndex, photos]);
+
+  // Move focus into the dialog on open, and back to the thumbnail on close.
+  useEffect(() => {
+    if (activeIndex !== null) {
+      closeButton.current?.focus();
+    } else if (lastTrigger.current) {
+      lastTrigger.current.focus();
+      lastTrigger.current = null;
+    }
+  }, [activeIndex]);
+
+  function onTouchStart(event: React.TouchEvent) {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function onTouchEnd(event: React.TouchEvent) {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || photos.length < 2) return;
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+
+    // Horizontal swipe of at least 50px that is clearly more sideways than vertical.
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) next();
+      else previous();
+    }
+  }
 
   // Keyboard controls + lock page scroll while the overlay is open.
   useEffect(() => {
@@ -81,7 +156,10 @@ export default function GalleryLightbox({
               <button
                 type="button"
                 className="photo-trigger"
-                onClick={() => setActiveIndex(index)}
+                onClick={(event) => {
+                  lastTrigger.current = event.currentTarget;
+                  setActiveIndex(index);
+                }}
                 aria-label={`Open photo ${index + 1} of ${photos.length}`}
               >
                 <img
@@ -108,10 +186,13 @@ export default function GalleryLightbox({
             aria-modal="true"
             aria-label={activePhoto.caption || galleryTitle}
             onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
           >
             <button
               type="button"
               className="lightbox-close"
+              ref={closeButton}
               onClick={close}
               aria-label="Close image"
             >
@@ -132,16 +213,27 @@ export default function GalleryLightbox({
             {(() => {
               const large = lightboxImage(activePhoto.display_url);
 
+              const isLoaded = loadedId === activePhoto.id;
+
               return (
-                <img
-                  key={activePhoto.id}
-                  className="lightbox-image"
-                  src={large.src}
-                  srcSet={large.srcSet}
-                  sizes={large.sizes}
-                  alt={activePhoto.caption || galleryTitle}
-                  decoding="async"
-                />
+                <>
+                  {!isLoaded && (
+                    <p className="lightbox-loading" aria-live="polite">
+                      LOADING…
+                    </p>
+                  )}
+                  <img
+                    key={activePhoto.id}
+                    className={`lightbox-image${isLoaded ? " is-loaded" : ""}`}
+                    src={large.src}
+                    srcSet={large.srcSet}
+                    sizes={large.sizes}
+                    alt={activePhoto.caption || galleryTitle}
+                    decoding="async"
+                    draggable={false}
+                    onLoad={() => setLoadedId(activePhoto.id)}
+                  />
+                </>
               );
             })()}
 
