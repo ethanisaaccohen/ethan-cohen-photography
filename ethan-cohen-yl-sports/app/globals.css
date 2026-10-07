@@ -27,6 +27,52 @@
   display: block;
   object-fit: cover;
   width: 100%;
+  background: #1d1d1d;
+}
+
+.caption-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.caption-input {
+  width: 100%;
+  margin: 0;
+  padding: 9px 10px;
+  resize: vertical;
+  min-height: 52px;
+  background: #161616;
+  color: var(--cream);
+  border: 1px solid #444;
+  font: 13px/1.4 Inter, Arial, sans-serif;
+}
+
+.caption-input:focus {
+  outline: none;
+  border-color: var(--lime);
+}
+
+.caption-input:disabled {
+  opacity: 0.6;
+}
+
+.photo-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.save-caption {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.save-caption:disabled {
+  background: #2a2a2a;
+  color: #7a7a7a;
+  cursor: default;
 }
 
 .delete-photo {
