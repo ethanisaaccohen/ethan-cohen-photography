@@ -149,7 +149,7 @@ function SearchClient() {
 
           <div className="proofGrid">
             {results.photos.map((photo) => {
-              const thumb = smallThumb(photo.display_url);
+              const thumb = smallThumb(photo);
 
               return (
                 <Link

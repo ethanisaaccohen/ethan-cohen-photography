@@ -33,13 +33,15 @@ export default async function Edit({
 
   const { data: photoRows } = await db
     .from("photos")
-    .select("id, display_url, caption, photo_tags(tag)")
+    .select("id, display_url, thumbnail_url, viewing_url, caption, photo_tags(tag)")
     .eq("gallery_id", id)
     .order("created_at", { ascending: false });
 
   const photos = (photoRows ?? []).map((photo: any) => ({
     id: photo.id,
     display_url: photo.display_url,
+    thumbnail_url: photo.thumbnail_url,
+    viewing_url: photo.viewing_url,
     caption: photo.caption,
     tags: tagsFromRelation(photo.photo_tags),
   }));
@@ -64,6 +66,7 @@ export default async function Edit({
       photos: found.map((photo: any) => ({
         id: photo.id,
         display_url: photo.display_url,
+        thumbnail_url: photo.thumbnail_url,
         caption: photo.caption ?? null,
       })),
       missing: ids.length - found.length,

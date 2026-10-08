@@ -32,7 +32,7 @@ export default function GalleryLightbox({
     <>
       <div className="photos">
         {photos.map((photo, index) => {
-          const thumb = gridThumb(photo.display_url);
+          const thumb = gridThumb(photo);
 
           return (
             <figure key={photo.id}>

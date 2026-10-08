@@ -50,14 +50,18 @@ export async function generateMetadata({ params }: RouteProps): Promise<Metadata
     db.from("photos").select("id", { count: "exact", head: true }).eq("gallery_id", gallery.id),
     db
       .from("photos")
-      .select("display_url")
+      .select("thumbnail_url")
       .eq("gallery_id", gallery.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
   ]);
 
-  const cover = gallery.cover_url || newest?.display_url || null;
+  const { data: explicitCover } = gallery.cover_url
+    ? await db.from("photos").select("thumbnail_url").eq("gallery_id", gallery.id)
+        .eq("display_url", gallery.cover_url).maybeSingle()
+    : { data: null };
+  const cover = explicitCover?.thumbnail_url || newest?.thumbnail_url || null;
   const description =
     describeGallery(gallery, count ?? undefined) || "Yeshiva League sports photography by Ethan Cohen.";
   const images = cover ? [{ url: ogImageUrl(cover), width: 1200, height: 800, alt: gallery.title }] : [];
@@ -107,6 +111,8 @@ export default async function Page({ params }: RouteProps) {
   const photos = (photoRows ?? []).map((photo: any) => ({
     id: photo.id as string,
     display_url: photo.display_url as string,
+    thumbnail_url: photo.thumbnail_url as string | null,
+    viewing_url: photo.viewing_url as string | null,
     caption: (photo.caption ?? null) as string | null,
     tags: tagsFromRelation(photo.photo_tags),
   }));

@@ -5,6 +5,7 @@ import { verifyAdminToken } from "@/lib/auth";
 import { adminSupabase } from "@/lib/supabase";
 import AdminGalleryList, { type AdminGallery } from "@/components/AdminGalleryList";
 import LogoutButton from "@/components/LogoutButton";
+import { chosenCover } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function Admin() {
 
   const { data } = await adminSupabase()
     .from("galleries")
-    .select("*, photos(id, display_url, created_at), favorite_submissions(id)")
+    .select("*, photos(id, display_url, thumbnail_url, created_at), favorite_submissions(id)")
     .order("created_at", { ascending: false });
 
   const galleries: AdminGallery[] = (data ?? []).map((gallery: any) => {
@@ -37,6 +38,7 @@ export default async function Admin() {
       team_away: gallery.team_away ?? null,
       is_public: Boolean(gallery.is_public),
       cover_url: gallery.cover_url || photos[0]?.display_url || null,
+      thumbnail_url: chosenCover(photos, gallery.cover_url),
       photo_count: photos.length,
       favorites_count: (gallery.favorite_submissions ?? []).length,
     };

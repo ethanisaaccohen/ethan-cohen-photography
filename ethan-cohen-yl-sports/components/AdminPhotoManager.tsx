@@ -7,6 +7,8 @@ import { parseTags } from "@/lib/tags";
 export type AdminPhoto = {
   id: string;
   display_url: string;
+  thumbnail_url?: string | null;
+  viewing_url?: string | null;
   caption?: string | null;
   tags?: string[];
 };
@@ -325,7 +327,7 @@ function PhotoCard({
     savedTags.join("\u0000").toLowerCase();
   const dirty = captionDirty || tagsDirty;
 
-  const thumb = smallThumb(photo.display_url);
+  const thumb = smallThumb(photo);
 
   function save() {
     if (!dirty || busy) return;

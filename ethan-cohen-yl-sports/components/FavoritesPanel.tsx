@@ -5,7 +5,7 @@ export type FavoriteSubmission = {
   name: string;
   email: string;
   created_at: string | null;
-  photos: { id: string; display_url: string; caption: string | null }[];
+  photos: { id: string; display_url: string; caption: string | null; thumbnail_url?: string | null }[];
   missing: number;
 };
 
@@ -59,7 +59,7 @@ export default function FavoritesPanel({
 
             <div className="favorites-grid">
               {submission.photos.map((photo) => {
-                const thumb = smallThumb(photo.display_url);
+                const thumb = smallThumb(photo);
 
                 return (
                   <a

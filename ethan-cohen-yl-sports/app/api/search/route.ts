@@ -11,6 +11,8 @@ type GalleryRelation = {
 type PhotoRow = {
   id: string;
   display_url: string;
+  thumbnail_url: string | null;
+  viewing_url: string | null;
   caption: string | null;
   gallery_id: string;
   galleries: GalleryRelation | GalleryRelation[] | null;
@@ -31,6 +33,8 @@ export type SearchResponse = {
   photos: {
     id: string;
     display_url: string;
+    thumbnail_url: string | null;
+    viewing_url: string | null;
     caption: string | null;
     tags: string[];
     gallery_title: string;
@@ -91,7 +95,7 @@ export async function GET(request: NextRequest) {
   const { data: photoRows } = await db
     .from("photos")
     .select(
-      "id, display_url, caption, gallery_id, galleries!inner(title, slug, sport, is_public)"
+      "id, display_url, thumbnail_url, viewing_url, caption, gallery_id, galleries!inner(title, slug, sport, is_public)"
     )
     .in("id", photoIds.slice(0, 200))
     .eq("galleries.is_public", true)
@@ -122,6 +126,8 @@ export async function GET(request: NextRequest) {
       {
         id: photo.id,
         display_url: photo.display_url,
+        thumbnail_url: photo.thumbnail_url,
+        viewing_url: photo.viewing_url,
         caption: photo.caption,
         tags: tagsByPhoto.get(photo.id) ?? [],
         gallery_title: gallery.title,

@@ -8,6 +8,8 @@ export type LightboxPhoto = {
   display_url: string;
   caption: string | null;
   tags?: string[];
+  thumbnail_url?: string | null;
+  viewing_url?: string | null;
 };
 
 type Props = {
@@ -40,6 +42,8 @@ export default function Lightbox({
   allowDownload = true,
 }: Props) {
   const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [failedId, setFailedId] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const closeButton = useRef<HTMLButtonElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -79,30 +83,7 @@ export default function Lightbox({
     window.history.replaceState(window.history.state, "", url);
   }, [activePhoto, syncUrl]);
 
-  // Preload the neighbours so arrows / swipes feel instant.
-  useEffect(() => {
-    if (activeIndex === null || count < 2) return;
-
-    const neighbours = [
-      photos[(activeIndex + 1) % count],
-      photos[(activeIndex - 1 + count) % count],
-    ];
-
-    const preloaded = neighbours.map((photo) => {
-      const large = lightboxImage(photo.display_url);
-      const image = new Image();
-      if (large.sizes) image.sizes = large.sizes;
-      if (large.srcSet) image.srcset = large.srcSet;
-      image.src = large.src;
-      return image;
-    });
-
-    return () => {
-      preloaded.forEach((image) => {
-        image.src = "";
-      });
-    };
-  }, [activeIndex, count, photos]);
+  // Do not preload viewing copies: only the photo explicitly opened is fetched.
 
   // Focus management: into the dialog on open, back where it was on close.
   useEffect(() => {
@@ -160,7 +141,7 @@ export default function Lightbox({
 
   if (!activePhoto || activeIndex === null) return null;
 
-  const large = lightboxImage(activePhoto.display_url);
+  const large = lightboxImage(activePhoto);
   const isLoaded = loadedId === activePhoto.id;
 
   return (
@@ -197,11 +178,18 @@ export default function Lightbox({
 
         {!isLoaded && (
           <p className="lightbox-loading" aria-live="polite">
-            LOADING…
+            {failedId === activePhoto.id ? (
+              <>
+                Could not load the viewing copy.{" "}
+                <button type="button" onClick={() => { setFailedId(null); setRetry((n) => n + 1); }}>
+                  RETRY
+                </button>
+              </>
+            ) : "LOADING…"}
           </p>
         )}
         <img
-          key={activePhoto.id}
+          key={`${activePhoto.id}-${retry}`}
           className={`lightbox-image${isLoaded ? " is-loaded" : ""}`}
           src={large.src}
           srcSet={large.srcSet}
@@ -210,6 +198,7 @@ export default function Lightbox({
           decoding="async"
           draggable={false}
           onLoad={() => setLoadedId(activePhoto.id)}
+          onError={() => { setLoadedId(null); setFailedId(activePhoto.id); }}
         />
 
         {count > 1 && (

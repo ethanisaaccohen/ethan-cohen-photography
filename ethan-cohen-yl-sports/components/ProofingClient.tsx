@@ -85,7 +85,7 @@ export default function ProofingClient({ gallery, photos }: any) {
 
       <div className="proofGrid">
         {photos.map((p: any, index: number) => {
-          const thumb = gridThumb(p.display_url);
+          const thumb = gridThumb(p);
           const isPicked = picked.includes(p.id);
 
           return (

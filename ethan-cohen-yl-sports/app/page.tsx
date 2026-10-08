@@ -1,6 +1,7 @@
 import Header from "@/components/Header";
 import GalleryCard from "@/components/GalleryCard";
 import { adminSupabase } from "@/lib/supabase";
+import { chosenCover } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function Home() {
       photos (
         id,
         display_url,
+        thumbnail_url,
         created_at
       )
     `)
@@ -31,6 +33,7 @@ export default async function Home() {
     return {
       ...gallery,
       cover_url: gallery.cover_url || photos[0]?.display_url || null,
+      thumbnail_url: chosenCover(photos, gallery.cover_url),
       photo_count: photos.length,
     };
   });

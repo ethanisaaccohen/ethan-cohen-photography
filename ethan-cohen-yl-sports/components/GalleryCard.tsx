@@ -4,7 +4,7 @@ import { coverImage } from "@/lib/images";
 type Props = { gallery: any };
 
 export default function GalleryCard({ gallery }: Props) {
-  const cover = gallery.cover_url ? coverImage(gallery.cover_url) : null;
+  const cover = gallery.thumbnail_url ? coverImage(gallery) : null;
 
   return (
     <Link className="card" href={`/gallery/${gallery.slug}`}>

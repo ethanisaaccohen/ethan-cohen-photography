@@ -14,6 +14,7 @@ export type AdminGallery = {
   team_away: string | null;
   is_public: boolean;
   cover_url: string | null;
+  thumbnail_url: string | null;
   photo_count: number;
   favorites_count: number;
 };
@@ -80,7 +81,7 @@ export default function AdminGalleryList({
 
       <div className="admin-gallery-list">
         {galleries.map((gallery) => {
-          const cover = gallery.cover_url ? smallThumb(gallery.cover_url) : null;
+          const cover = gallery.thumbnail_url ? smallThumb(gallery) : null;
           const busy = busyId === gallery.id;
 
           return (

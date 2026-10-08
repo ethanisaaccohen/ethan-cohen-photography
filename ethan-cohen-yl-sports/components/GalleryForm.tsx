@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import AdminPhotoManager, { type AdminPhoto as Photo } from "@/components/AdminPhotoManager";
 import ShareLinks from "@/components/ShareLinks";
 import { slugify } from "@/lib/galleries";
+import { createPhotoDerivatives } from "@/lib/photo-derivatives";
 
 type GalleryFormProps = {
   existing?: any;
@@ -16,7 +17,7 @@ type UploadState = {
   error?: string;
 };
 
-const CONCURRENT_UPLOADS = 4;
+const CONCURRENT_UPLOADS = 2;
 
 async function readJson(response: Response) {
   const text = await response.text();
@@ -62,6 +63,18 @@ export default function GalleryForm({
     updateUpload(index, { status: "uploading", error: undefined });
 
     try {
+      // Read the local original once. Browsing the site never runs this code.
+      const copies = await createPhotoDerivatives(file);
+      const copyForm = new FormData();
+      copyForm.append("thumbnail", copies.thumbnail, "thumbnail.jpg");
+      copyForm.append("viewing", copies.viewing, "viewing.jpg");
+      const copyResponse = await fetch(`/api/admin/gallery/${galleryId}/derivatives`, {
+        method: "POST", body: copyForm,
+      });
+      const storedCopies = await readJson(copyResponse);
+      if (!copyResponse.ok || !storedCopies.thumbnail_url || !storedCopies.viewing_url) {
+        throw new Error(storedCopies.error || "Could not store the image copies. The photo has not been published.");
+      }
       const signingResponse = await fetch("/api/admin/presign", {
         method: "POST",
         headers: {
@@ -108,6 +121,10 @@ export default function GalleryForm({
           body: JSON.stringify({
             display_url: signedUpload.publicUrl,
             storage_key: signedUpload.key,
+            thumbnail_url: storedCopies.thumbnail_url,
+            viewing_url: storedCopies.viewing_url,
+            thumbnail_storage_key: storedCopies.thumbnail_storage_key,
+            viewing_storage_key: storedCopies.viewing_storage_key,
             caption: "",
             tags: [],
           }),
@@ -174,11 +191,11 @@ export default function GalleryForm({
       away_score: payload.away_score ? Number(payload.away_score) : null,
     };
 
-    let gallery = existing;
+    let gallery = galleryMeta ?? existing;
 
     try {
-      if (existing) {
-        const response = await fetch(`/api/admin/gallery/${existing.id}`, {
+      if (gallery?.id) {
+        const response = await fetch(`/api/admin/gallery/${gallery.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -211,6 +228,8 @@ export default function GalleryForm({
         }
 
         gallery = result;
+        setGalleryMeta(result);
+        if (result.slug) setSlug(result.slug);
       }
 
       if (!gallery?.id) {
@@ -406,7 +425,7 @@ export default function GalleryForm({
 
     </form>
 
-      {existing && galleryMeta && (
+      {galleryMeta && (
         <ShareLinks
           slug={galleryMeta.slug}
           isPublic={Boolean(galleryMeta.is_public)}
@@ -414,10 +433,10 @@ export default function GalleryForm({
         />
       )}
 
-      {existing && (
+      {galleryMeta && (
         <AdminPhotoManager
-          galleryId={existing.id}
-          initialCoverUrl={existing.cover_url ?? null}
+          galleryId={galleryMeta.id}
+          initialCoverUrl={galleryMeta.cover_url ?? null}
           photos={galleryPhotos}
           onChange={setGalleryPhotos}
         />

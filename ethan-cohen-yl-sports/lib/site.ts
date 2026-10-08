@@ -11,13 +11,10 @@ export function siteUrl(): URL {
 }
 
 /**
- * A 1200px wide optimized version of a B2 original, as an absolute URL.
- * Used for Open Graph / iMessage / WhatsApp link previews so they never
- * download the 20+ MB original.
+ * Link previews use the already-stored thumbnail, never the image optimizer.
  */
-export function ogImageUrl(originalUrl: string): string {
-  const params = new URLSearchParams({ url: originalUrl, w: "1200", q: "75" });
-  return new URL(`/_next/image?${params.toString()}`, siteUrl()).toString();
+export function ogImageUrl(thumbnailUrl: string): string {
+  return new URL(thumbnailUrl, siteUrl()).toString();
 }
 
 export function formatGameDate(value: string | null | undefined) {
